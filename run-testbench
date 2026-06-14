@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+usage() {
+    cat <<'EOF'
+Usage:
+  ./run-testbench <module>
+
+Examples:
+  ./run-testbench ula
+  ./run-testbench regfile
+  ./run-testbench mips_top
+
+Supported modules:
+  pc
+  i_mem
+  d_mem
+  regfile
+  ula
+  ula_ctrl
+  ctrl
+  mips_top
+EOF
+}
+
+if [[ $# -ne 1 ]]; then
+    usage
+    exit 1
+fi
+
+module="$1"
+tb_file="tb/tb_${module}.v"
+src_file="src/${module}.v"
+out_file="sim/tb_${module}.out"
+
+if [[ ! -f "$tb_file" ]]; then
+    echo "Error: testbench not found: $tb_file" >&2
+    exit 1
+fi
+
+if [[ ! -f "$src_file" ]]; then
+    echo "Error: source module not found: $src_file" >&2
+    exit 1
+fi
+
+mkdir -p sim
+
+common_sources=(
+    src/pc.v
+    src/i_mem.v
+    src/d_mem.v
+    src/regfile.v
+    src/ula.v
+    src/ula_ctrl.v
+    src/ctrl.v
+    src/mips_top.v
+)
+
+case "$module" in
+    mips_top)
+        compile_sources=("$tb_file" "${common_sources[@]}")
+        ;;
+    pc|i_mem|d_mem|regfile|ula|ula_ctrl|ctrl)
+        compile_sources=("$src_file" "$tb_file")
+        ;;
+    *)
+        echo "Error: unsupported module: $module" >&2
+        usage
+        exit 1
+        ;;
+esac
+
+echo "Compiling $tb_file..."
+iverilog -o "$out_file" "${compile_sources[@]}"
+
+echo "Running $module testbench..."
+vvp "$out_file"
