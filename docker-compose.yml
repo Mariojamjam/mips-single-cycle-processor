@@ -1,0 +1,7 @@
+services:
+  mips:
+    build: .
+    volumes:
+      - .:/mips
+    stdin_open: true
+    tty: true
