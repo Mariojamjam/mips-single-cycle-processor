@@ -1,0 +1,19 @@
+{
+  "name": "mips-single-cycle-processor",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": ".."
+  },
+  "workspaceFolder": "/workspaces/mips-single-cycle-processor",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/mips-single-cycle-processor,type=bind",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "mshr-h.VerilogHDL",
+        "ms-vscode.makefile-tools"
+      ]
+    }
+  },
+  "postCreateCommand": "chmod +x run-testbench || true",
+  "remoteUser": "root"
+}
