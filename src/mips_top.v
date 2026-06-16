@@ -30,14 +30,21 @@ module mips_top #(
     wire        Jump;
     wire        JAL;
     wire        JR;
+    wire        LUI;
 
     wire [3:0]  ULAOp;
     wire [31:0] read_data1;
     wire [31:0] read_data2;
+
+    wire [31:0] sign_extended_immediate;
+    wire [31:0] zero_extended_immediate;
     wire [31:0] immediate_extended;
+    
     wire [31:0] alu_in2;
+    wire [31:0] lui_value;
     wire [31:0] write_data;
     wire [31:0] pc_plus_4;
+    wire [31:0] pc_plus_8;
     wire [31:0] branch_target;
     wire [31:0] jump_target;
     wire [31:0] next_pc;
@@ -45,8 +52,9 @@ module mips_top #(
     wire        zero_flag;
     wire        is_bne;
     wire        branch_taken;
-    wire        jr_instruction;
     wire        reg_write_enabled;
+
+    wire ZeroExt;
 
     assign opcode       = instruction[31:26];
     assign rs           = instruction[25:21];
@@ -57,20 +65,31 @@ module mips_top #(
     assign immediate    = instruction[15:0];
     assign jump_address = instruction[25:0];
 
-    assign immediate_extended = {{16{immediate[15]}}, immediate};
+    assign sign_extended_immediate = {{16{immediate[15]}}, immediate};
+    assign zero_extended_immediate = {16'b0, immediate};
+
+    assign immediate_extended = ZeroExt ? zero_extended_immediate : sign_extended_immediate;
+
     assign alu_in2            = ALUSrc ? immediate_extended : read_data2;
     assign write_addr         = JAL ? 5'd31 : (RegDst ? rd : rt);
-    assign write_data         = JAL ? pc_plus_4 : (MemtoReg ? DataMemoryOut : ULAResult);
+
+    assign write_data         = JAL ? pc_plus_8 :
+                                LUI ? lui_value :
+                                (MemtoReg ? DataMemoryOut : ULAResult);
+                    
     assign pc_plus_4          = PC + 32'd4;
+    assign pc_plus_8          = PC + 32'd8;
     assign branch_target      = pc_plus_4 + (immediate_extended << 2);
     assign jump_target        = {pc_plus_4[31:28], jump_address, 2'b00};
     assign is_bne             = (opcode == 6'b000101);
     assign branch_taken       = Branch && (is_bne ? !zero_flag : zero_flag);
-    assign jr_instruction     = (opcode == 6'b000000) && (funct == 6'b001000);
-    assign reg_write_enabled  = RegWrite && !jr_instruction;
-    assign next_pc            = jr_instruction ? read_data1 :
-                                (Jump ? jump_target :
-                                (branch_taken ? branch_target : pc_plus_4));
+    assign reg_write_enabled = RegWrite;
+    assign next_pc = JR ? read_data1 :
+                Jump ? jump_target :
+                 branch_taken ? branch_target :
+                 pc_plus_4;
+
+    assign lui_value = {immediate, 16'b0};
 
     pc pc_unit (
         .clk(Clock),
@@ -99,7 +118,10 @@ module mips_top #(
         .RegWrite(RegWrite),
         .Jump(Jump),
         .JAL(JAL),
-        .JR(JR)
+        .JR(JR),
+        .LUI(LUI),
+        .ZeroExt(ZeroExt),
+        .funct(funct)
     );
 
     regfile register_file (
