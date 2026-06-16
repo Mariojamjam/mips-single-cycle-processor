@@ -17,6 +17,7 @@ module ctrl (
 );
 
     always @(*) begin
+        //safe defaults before the opcode-specific cases
         RegDst   = 1'b0;
         Branch   = 1'b0;
         MemRead  = 1'b0;
@@ -34,6 +35,7 @@ module ctrl (
         case (opcode)
             6'b000000: begin
                 if (funct == 6'b001000) begin // jr
+                    //jr only redirects the PC
                     JR = 1'b1;
                 end else begin // other R-type
                     RegDst   = 1'b1;
@@ -106,6 +108,7 @@ module ctrl (
             end
 
             6'b001111: begin // lui
+                //writeback comes from the immediate upper half
                 ALUSrc   = 1'b1;
                 RegWrite = 1'b1;
                 LUI      = 1'b1;

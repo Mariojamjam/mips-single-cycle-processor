@@ -40,30 +40,36 @@ module tb_pc;
         nextPC = 32'h00000000;
 
         #1;
+        //reset should force the PC to zero immediately
         check(32'h00000000, currentPC, "reset");
 
         Reset = 0;
 
+        //first normal update
         nextPC = 32'h00000004;
         @(posedge clk);
         #1;
         check(32'h00000004, currentPC, "update to 4");
 
+        //second update, same behavior
         nextPC = 32'h00000008;
         @(posedge clk);
         #1;
         check(32'h00000008, currentPC, "update to 8");
 
+        //another step just to catch timing mistakes
         nextPC = 32'h00000010;
         @(posedge clk);
         #1;
         check(32'h00000010, currentPC, "update to 16");
 
+        //one more value for confidence
         nextPC = 32'h00000020;
         @(posedge clk);
         #1;
         check(32'h00000020, currentPC, "update to 32");
 
+        //reset should still win after several updates
         Reset = 1;
         #1;
         check(32'h00000000, currentPC, "reset after updates");

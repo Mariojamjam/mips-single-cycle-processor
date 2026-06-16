@@ -8,10 +8,11 @@ module i_mem #(
     reg [31:0] mem [0:DEPTH-1];
 
     initial begin
+        //load the test program once when simulation starts
         $readmemb(MEM_FILE, mem);
     end
 
-    // Asynchronous read, divides byte address by 4 to get word index
+    //byte address in, word slot inside the array
     assign i_out = mem[address >> 2];
 
 endmodule

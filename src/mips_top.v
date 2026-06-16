@@ -65,6 +65,7 @@ module mips_top #(
     assign immediate    = instruction[15:0];
     assign jump_address = instruction[25:0];
 
+    //logic immediates use zeros, the others keep the sign
     assign sign_extended_immediate = {{16{immediate[15]}}, immediate};
     assign zero_extended_immediate = {16'b0, immediate};
 
@@ -73,6 +74,7 @@ module mips_top #(
     assign alu_in2            = ALUSrc ? immediate_extended : read_data2;
     assign write_addr         = JAL ? 5'd31 : (RegDst ? rd : rt);
 
+    //writeback can come from jal, lui, memory, or the ALU
     assign write_data         = JAL ? pc_plus_8 :
                                 LUI ? lui_value :
                                 (MemtoReg ? DataMemoryOut : ULAResult);
@@ -82,13 +84,16 @@ module mips_top #(
     assign branch_target      = pc_plus_4 + (immediate_extended << 2);
     assign jump_target        = {pc_plus_4[31:28], jump_address, 2'b00};
     assign is_bne             = (opcode == 6'b000101);
+    //beq and bne share the same branch signal, so we split here
     assign branch_taken       = Branch && (is_bne ? !zero_flag : zero_flag);
     assign reg_write_enabled = RegWrite;
+    //jr wins first, then j/jal, then branches, then plain fall-through
     assign next_pc = JR ? read_data1 :
                 Jump ? jump_target :
                  branch_taken ? branch_target :
                  pc_plus_4;
 
+    //lui drops the immediate in the upper 16 bits
     assign lui_value = {immediate, 16'b0};
 
     pc pc_unit (

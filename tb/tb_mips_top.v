@@ -46,13 +46,21 @@ module tb_mips_top;
         repeat (8) @(posedge Clock);
         #1;
 
+        //r1 gets the first addi result
         check(32'd5,  uut.register_file.regs[1], "addi writes r1");
+        //r2 gets the second immediate
         check(32'd7,  uut.register_file.regs[2], "addi writes r2");
+        //the add instruction should combine r1 and r2
         check(32'd12, uut.register_file.regs[3], "R-type add writes r3");
+        //store should push r3 into memory slot 0
         check(32'd12, uut.data_memory.mem[0], "sw stores r3 in data memory");
+        //load should pull that value back into r4
         check(32'd12, uut.register_file.regs[4], "lw loads memory into r4");
+        //this proves the skipped writes really stayed skipped
         check(32'd0,  uut.register_file.regs[5], "beq and j skip r5 writes");
+        //final sub result from the test program
         check(32'd7,  uut.register_file.regs[6], "R-type sub writes r6");
+        //final PC tells us control flow ended where expected
         check(32'd40, PC, "PC reaches instruction after test program");
 
         if (errors == 0) begin

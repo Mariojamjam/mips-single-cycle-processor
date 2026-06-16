@@ -10,6 +10,7 @@ module ula (
     assign Zero_flag = (result == 32'b0);
 
     always @(*) begin
+        //matches the encoding chosen in ula_ctrl
         case (OP)
             4'b0000: result = In1 & In2;                                        // AND
             4'b0001: result = In1 | In2;                                        // OR
