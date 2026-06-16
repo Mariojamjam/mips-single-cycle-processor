@@ -1,5 +1,6 @@
 module tb_ctrl;
     reg [5:0] opcode;
+    reg [5:0] funct;
 
     wire RegDst;
     wire Branch;
@@ -12,9 +13,12 @@ module tb_ctrl;
     wire Jump;
     wire JAL;
     wire JR;
+    wire LUI;
+    wire ZeroExt;
 
     ctrl uut (
         .opcode(opcode),
+        .funct(funct),
         .RegDst(RegDst),
         .Branch(Branch),
         .MemRead(MemRead),
@@ -25,7 +29,9 @@ module tb_ctrl;
         .RegWrite(RegWrite),
         .Jump(Jump),
         .JAL(JAL),
-        .JR(JR)
+        .JR(JR),
+        .LUI(LUI),
+        .ZeroExt(ZeroExt)
     );
 
     integer errors = 0;
@@ -42,6 +48,8 @@ module tb_ctrl;
         input        exp_Jump;
         input        exp_JAL;
         input        exp_JR;
+        input        exp_LUI;
+        input        exp_ZeroExt;
         input [127:0] instr_name;
         begin
             if (RegDst   !== exp_RegDst   ||
@@ -54,13 +62,15 @@ module tb_ctrl;
                 RegWrite !== exp_RegWrite ||
                 Jump     !== exp_Jump     ||
                 JAL      !== exp_JAL      ||
-                JR       !== exp_JR) begin
+                JR       !== exp_JR       ||
+                LUI      !== exp_LUI      ||
+                ZeroExt  !== exp_ZeroExt) begin
 
                 $display("FAIL [%s]", instr_name);
-                $display("got      RegDst=%b Branch=%b MemRead=%b MemtoReg=%b ALUOp=%b MemWrite=%b ALUSrc=%b RegWrite=%b Jump=%b JAL=%b JR=%b",
-                          RegDst, Branch, MemRead, MemtoReg, ALUOp, MemWrite, ALUSrc, RegWrite, Jump, JAL, JR);
-                $display("expected RegDst=%b Branch=%b MemRead=%b MemtoReg=%b ALUOp=%b MemWrite=%b ALUSrc=%b RegWrite=%b Jump=%b JAL=%b JR=%b",
-                          exp_RegDst, exp_Branch, exp_MemRead, exp_MemtoReg, exp_ALUOp, exp_MemWrite, exp_ALUSrc, exp_RegWrite, exp_Jump, exp_JAL, exp_JR);
+                $display("got      RegDst=%b Branch=%b MemRead=%b MemtoReg=%b ALUOp=%b MemWrite=%b ALUSrc=%b RegWrite=%b Jump=%b JAL=%b JR=%b LUI=%b ZeroExt=%b",
+                          RegDst, Branch, MemRead, MemtoReg, ALUOp, MemWrite, ALUSrc, RegWrite, Jump, JAL, JR, LUI, ZeroExt);
+                $display("expected RegDst=%b Branch=%b MemRead=%b MemtoReg=%b ALUOp=%b MemWrite=%b ALUSrc=%b RegWrite=%b Jump=%b JAL=%b JR=%b LUI=%b ZeroExt=%b",
+                          exp_RegDst, exp_Branch, exp_MemRead, exp_MemtoReg, exp_ALUOp, exp_MemWrite, exp_ALUSrc, exp_RegWrite, exp_Jump, exp_JAL, exp_JR, exp_LUI, exp_ZeroExt);
 
                 errors = errors + 1;
             end else
@@ -72,50 +82,56 @@ module tb_ctrl;
         $dumpfile("sim/tb_ctrl.vcd");
         $dumpvars(0, tb_ctrl);
 
-        opcode = 6'b000000; #10;
-        check(1, 0, 0, 0, 2'b10, 0, 0, 1, 0, 0, 0, "R-type");
+        opcode = 6'b000000; funct = 6'b100000; #10;
+        check(1, 0, 0, 0, 2'b10, 0, 0, 1, 0, 0, 0, 0, 0, "R-type");
 
-        opcode = 6'b100011; #10;
-        check(0, 0, 1, 1, 2'b00, 0, 1, 1, 0, 0, 0, "lw");
+        opcode = 6'b000000; funct = 6'b001000; #10;
+        check(0, 0, 0, 0, 2'b00, 0, 0, 0, 0, 0, 1, 0, 0, "jr");
 
-        opcode = 6'b101011; #10;
-        check(0, 0, 0, 0, 2'b00, 1, 1, 0, 0, 0, 0, "sw");
+        opcode = 6'b100011; funct = 6'b000000; #10;
+        check(0, 0, 1, 1, 2'b00, 0, 1, 1, 0, 0, 0, 0, 0, "lw");
 
-        opcode = 6'b000100; #10;
-        check(0, 1, 0, 0, 2'b01, 0, 0, 0, 0, 0, 0, "beq");
+        opcode = 6'b101011; funct = 6'b000000; #10;
+        check(0, 0, 0, 0, 2'b00, 1, 1, 0, 0, 0, 0, 0, 0, "sw");
 
-        opcode = 6'b000101; #10;
-        check(0, 1, 0, 0, 2'b01, 0, 0, 0, 0, 0, 0, "bne");
+        opcode = 6'b000100; funct = 6'b000000; #10;
+        check(0, 1, 0, 0, 2'b01, 0, 0, 0, 0, 0, 0, 0, 0, "beq");
 
-        opcode = 6'b001000; #10;
-        check(0, 0, 0, 0, 2'b11, 0, 1, 1, 0, 0, 0, "addi");
+        opcode = 6'b000101; funct = 6'b000000; #10;
+        check(0, 1, 0, 0, 2'b01, 0, 0, 0, 0, 0, 0, 0, 0, "bne");
 
-        opcode = 6'b001100; #10;
-        check(0, 0, 0, 0, 2'b11, 0, 1, 1, 0, 0, 0, "andi");
+        opcode = 6'b001000; funct = 6'b000000; #10;
+        check(0, 0, 0, 0, 2'b11, 0, 1, 1, 0, 0, 0, 0, 0, "addi");
 
-        opcode = 6'b001101; #10;
-        check(0, 0, 0, 0, 2'b11, 0, 1, 1, 0, 0, 0, "ori");
+        opcode = 6'b001100; funct = 6'b000000; #10;
+        check(0, 0, 0, 0, 2'b11, 0, 1, 1, 0, 0, 0, 0, 1, "andi");
 
-        opcode = 6'b001110; #10;
-        check(0, 0, 0, 0, 2'b11, 0, 1, 1, 0, 0, 0, "xori");
+        opcode = 6'b001101; funct = 6'b000000; #10;
+        check(0, 0, 0, 0, 2'b11, 0, 1, 1, 0, 0, 0, 0, 1, "ori");
 
-        opcode = 6'b001010; #10;
-        check(0, 0, 0, 0, 2'b11, 0, 1, 1, 0, 0, 0, "slti");
+        opcode = 6'b001110; funct = 6'b000000; #10;
+        check(0, 0, 0, 0, 2'b11, 0, 1, 1, 0, 0, 0, 0, 1, "xori");
 
-        opcode = 6'b001011; #10;
-        check(0, 0, 0, 0, 2'b11, 0, 1, 1, 0, 0, 0, "sltiu");
+        opcode = 6'b001010; funct = 6'b000000; #10;
+        check(0, 0, 0, 0, 2'b11, 0, 1, 1, 0, 0, 0, 0, 0, "slti");
 
-        opcode = 6'b000010; #10;
-        check(0, 0, 0, 0, 2'b00, 0, 0, 0, 1, 0, 0, "j");
+        opcode = 6'b001011; funct = 6'b000000; #10;
+        check(0, 0, 0, 0, 2'b11, 0, 1, 1, 0, 0, 0, 0, 0, "sltiu");
 
-        opcode = 6'b000011; #10;
-        check(0, 0, 0, 0, 2'b00, 0, 0, 1, 1, 1, 0, "jal");
+        opcode = 6'b001111; funct = 6'b000000; #10;
+        check(0, 0, 0, 0, 2'b00, 0, 1, 1, 0, 0, 0, 1, 0, "lui");
 
-        opcode = 6'b111111; #10;
-        check(0, 0, 0, 0, 2'b00, 0, 0, 0, 0, 0, 0, "default");
+        opcode = 6'b000010; funct = 6'b000000; #10;
+        check(0, 0, 0, 0, 2'b00, 0, 0, 0, 1, 0, 0, 0, 0, "j");
+
+        opcode = 6'b000011; funct = 6'b000000; #10;
+        check(0, 0, 0, 0, 2'b00, 0, 0, 1, 1, 1, 0, 0, 0, "jal");
+
+        opcode = 6'b111111; funct = 6'b000000; #10;
+        check(0, 0, 0, 0, 2'b00, 0, 0, 0, 0, 0, 0, 0, 0, "default");
 
         if (errors == 0)
-            $display("ALL PASS - %0d tests", 14);
+            $display("ALL PASS - %0d tests", 16);
         else begin
             $display("FAILED - %0d error(s)", errors);
             $finish(1);
