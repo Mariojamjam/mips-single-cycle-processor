@@ -6,6 +6,7 @@ module ula_ctrl (
 );
 
     always @(*) begin
+        //ALUOp picks the decoding path, opcode/funct finish the job
         case (ALUOp)
             2'b00: ULAOp = 4'b0100; // ADD: lw/sw address calculation
             2'b01: ULAOp = 4'b0101; // SUB: beq/bne comparison
