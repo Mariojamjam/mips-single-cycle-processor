@@ -15,7 +15,7 @@ O projeto implementa os seguintes módulos em Verilog, conectados hierarquicamen
 | Memória de dados | `src/d_mem.v` | RAM assíncrona para leitura e escrita de dados |
 | Banco de registradores | `src/regfile.v` | 32 registradores de 32 bits com leitura assíncrona e escrita síncrona |
 | ULA | `src/ula.v` | Executa operações aritméticas e lógicas |
-| Controle da ULA | `src/ula_ctrl.v` | Traduz `ALUOp` + `funct` para o código de operação da ULA |
+| Controle da ULA | `src/ula_ctrl.v` | Traduz `ALUOp` + `opcode`/`funct` para o código de operação da ULA |
 | Unidade de controle | `src/ctrl.v` | Decodifica o opcode e gera todos os sinais de controle |
 | Top-level | `src/mips_top.v` | Instancia e conecta todos os módulos com fios e multiplexadores |
 
@@ -292,15 +292,15 @@ Registrador síncrono de 32 bits. Atualiza na borda de subida do clock com o val
 
 ### Etapa 6 — Controle da ULA (`src/ula_ctrl.v` + `tb/tb_ula_ctrl.v`)
 
-Recebe `ALUOp` (2 bits) da unidade de controle e `funct` (6 bits) da instrução. Produz `ULAOp` (4 bits) que vai direto para a ULA.
+Recebe `ALUOp` (2 bits) da unidade de controle, `opcode` (6 bits) e `funct` (6 bits) da instrução. Produz `ULAOp` (4 bits) que vai direto para a ULA.
 
 Lógica de decodificação:
 - `ALUOp=00` → add (usado por `lw`/`sw`)
 - `ALUOp=01` → sub (usado por `beq`/`bne`)
 - `ALUOp=10` → decodifica pelo campo `funct` (instruções tipo R)
-- `ALUOp=11` → operações tipo I aritméticas (`addi`, `andi`, etc.)
+- `ALUOp=11` → decodifica pelo campo `opcode` (operações tipo I aritméticas, como `addi`, `andi`, etc.)
 
-**Critério de conclusão:** `ULAOp` correto para cada combinação de `ALUOp` + `funct`.
+**Critério de conclusão:** `ULAOp` correto para cada combinação de `ALUOp` + `opcode`/`funct`.
 
 ---
 
