@@ -5,7 +5,11 @@
     "context": ".."
   },
   "workspaceFolder": "/workspaces/mips-single-cycle-processor",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/mips-single-cycle-processor,type=bind",
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/workspaces/mips-single-cycle-processor,type=bind",
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.gitconfig,target=/root/.gitconfig,type=bind,consistency=cached",
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/root/.ssh,type=bind,consistency=cached"
+  ],
   "customizations": {
     "vscode": {
       "extensions": [
