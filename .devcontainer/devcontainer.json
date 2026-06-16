@@ -5,11 +5,9 @@
     "context": ".."
   },
   "workspaceFolder": "/workspaces/mips-single-cycle-processor",
-  "mounts": [
-    "source=${localWorkspaceFolder},target=/workspaces/mips-single-cycle-processor,type=bind",
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.gitconfig,target=/root/.gitconfig,type=bind,consistency=cached",
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/root/.ssh,type=bind,consistency=cached"
-  ],
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {}
+  },
   "customizations": {
     "vscode": {
       "extensions": [
