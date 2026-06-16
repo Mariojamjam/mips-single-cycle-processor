@@ -5,12 +5,13 @@ set -euo pipefail
 usage() {
     cat <<'EOF'
 Usage:
-  ./run-testbench <module>
+  /run-testbench <module>
 
 Examples:
-  ./run-testbench ula
-  ./run-testbench regfile
-  ./run-testbench mips_top
+  /run-testbench ula
+  /run-testbench ula_ctrl
+  /run-testbench regfile
+  /run-testbench mips_top
 
 Supported modules:
   pc
@@ -30,6 +31,29 @@ if [[ $# -ne 1 ]]; then
 fi
 
 module="$1"
+find_project_dir() {
+    if [[ -d "$PWD/src" && -d "$PWD/tb" ]]; then
+        printf '%s\n' "$PWD"
+        return
+    fi
+
+    for candidate in \
+        /workspaces/mips-single-cycle-processor \
+        /mips
+    do
+        if [[ -d "$candidate/src" && -d "$candidate/tb" ]]; then
+            printf '%s\n' "$candidate"
+            return
+        fi
+    done
+
+    echo "Error: project directory not found. Run this inside the project container." >&2
+    exit 1
+}
+
+project_dir="$(find_project_dir)"
+cd "$project_dir"
+
 tb_file="tb/tb_${module}.v"
 src_file="src/${module}.v"
 out_file="sim/tb_${module}.out"
@@ -71,6 +95,7 @@ case "$module" in
         ;;
 esac
 
+echo "Project: $project_dir"
 echo "Compiling $tb_file..."
 iverilog -o "$out_file" "${compile_sources[@]}"
 
