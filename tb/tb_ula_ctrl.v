@@ -3,6 +3,7 @@ module tb_ula_ctrl;
     reg  [5:0] opcode;
     reg  [5:0] funct;
     wire [3:0] ULAOp;
+    //decode-only bench for the ALU control micro-table
 
     ula_ctrl uut (
         .ALUOp(ALUOp),
@@ -12,6 +13,7 @@ module tb_ula_ctrl;
     );
 
     integer errors = 0;
+    //each check here is just one mapping in the decode table
 
     task check;
         input [1:0] expected_ALUOp;
@@ -23,6 +25,7 @@ module tb_ula_ctrl;
             ALUOp = expected_ALUOp;
             opcode = expected_opcode;
             funct = expected_funct;
+            //tiny delay is enough, this whole block is combinational
             #10;
 
             if (ULAOp !== expected_ULAOp) begin

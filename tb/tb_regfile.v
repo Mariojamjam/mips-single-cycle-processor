@@ -8,6 +8,7 @@ module tb_regfile;
     reg  [31:0] WriteData;
     wire [31:0] ReadData1;
     wire [31:0] ReadData2;
+    //this one reads like a tiny usage script for the register file
 
     regfile uut (
         .ReadAddr1(ReadAddr1),
@@ -22,6 +23,7 @@ module tb_regfile;
     );
 
     integer errors = 0;
+    //direct scenarios are enough because the regfile interface is pretty small
     //Compares actual against expected, logs PASS/FAIL with operation label
     task check;
         input [31:0] expected;
@@ -39,6 +41,7 @@ module tb_regfile;
     //Triggers one rising clock edge
     task tick;
         begin
+            //makes the write timing explicit in each test block
             #5 Clock = 1;
             #5 Clock = 0;
         end

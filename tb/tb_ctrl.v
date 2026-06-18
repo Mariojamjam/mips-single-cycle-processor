@@ -15,6 +15,7 @@ module tb_ctrl;
     wire JR;
     wire LUI;
     wire ZeroExt;
+    //decode bench: feed opcodes in, check if the control story makes sense out
 
     ctrl uut (
         .opcode(opcode),
@@ -35,6 +36,7 @@ module tb_ctrl;
     );
 
     integer errors = 0;
+    //kept flat on purpose, easier to extend when control signals grow
 
     task check;
         input        exp_RegDst;
@@ -81,6 +83,7 @@ module tb_ctrl;
     initial begin
         $dumpfile("sim/tb_ctrl.vcd");
         $dumpvars(0, tb_ctrl);
+        //this bench is basically a decode truth table with a little narration
 
         //plain R-type should write to rd
         opcode = 6'b000000; funct = 6'b100000; #10;
@@ -149,6 +152,7 @@ module tb_ctrl;
         if (errors == 0)
             $display("ALL PASS - %0d tests", 16);
         else begin
+            //decode bugs tend to poison everything else, so fail loud here
             $display("FAILED - %0d error(s)", errors);
             $finish(1);
         end

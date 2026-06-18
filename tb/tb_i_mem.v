@@ -1,6 +1,7 @@
 module tb_i_mem;
     reg  [31:0] address;
     wire [31:0] i_out;
+    //just enough to prove PC byte addresses land on the right ROM entries
 
     i_mem #(.MEM_FILE("programs/instruction_test.list")) uut (
         .address(address),
@@ -8,6 +9,7 @@ module tb_i_mem;
     );
 
     integer errors = 0;
+    //ROM bench is tiny on purpose: just prove the fetch mapping is sane
     //Compares actual against expected, logs PASS/FAIL with operation label
     task check;
         input [31:0] expected;

@@ -12,6 +12,7 @@ Examples:
   /run-testbench ula_ctrl
   /run-testbench regfile
   /run-testbench mips_top
+  /run-testbench mips_wave
 
 Supported modules:
   pc
@@ -22,6 +23,7 @@ Supported modules:
   ula_ctrl
   ctrl
   mips_top
+  mips_wave
 EOF
 }
 
@@ -63,7 +65,7 @@ if [[ ! -f "$tb_file" ]]; then
     exit 1
 fi
 
-if [[ ! -f "$src_file" ]]; then
+if [[ "$module" != "mips_top" && "$module" != "mips_wave" && ! -f "$src_file" ]]; then
     echo "Error: source module not found: $src_file" >&2
     exit 1
 fi
@@ -82,7 +84,7 @@ common_sources=(
 )
 
 case "$module" in
-    mips_top)
+    mips_top|mips_wave)
         compile_sources=("$tb_file" "${common_sources[@]}")
         ;;
     pc|i_mem|d_mem|regfile|ula|ula_ctrl|ctrl)
