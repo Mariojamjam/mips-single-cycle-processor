@@ -6,6 +6,7 @@ module tb_d_mem;
     reg         MemRead;
     reg         MemWrite;
     wire [31:0] ReadData;
+    //scripted memory scenarios are enough here, since the module is small and stateful
 
     d_mem uut (
         .Clock(Clock),
@@ -17,6 +18,7 @@ module tb_d_mem;
     );
 
     integer errors = 0;
+    //small scripted cases are enough here, no need to over-engineer it
 
     //Compares actual against expected, logs PASS/FAIL with operation label
     task check;
@@ -35,6 +37,7 @@ module tb_d_mem;
     //Triggers one rising clock edge
     task tick;
         begin
+            //helper so each memory scenario reads like a short script
             #5 Clock = 1;
             #5 Clock = 0;
         end
@@ -49,9 +52,9 @@ module tb_d_mem;
 
         //if nothing is being read, the bus should float
         MemWrite = 0; MemRead = 0; Address = 32'd0; #1;
-        check(32'bz, ReadData, " impedance");
+        check(32'bz, ReadData, "high impedance");
 
-        //a disabled store should not clobber old contents
+        //this checks we do not accidentally write just because Address/Data changed
         MemWrite = 1; MemRead = 0; Address = 32'd4; WriteData = 32'hBCDAADCB; tick;
 
         MemRead=0; MemWrite = 0; Address = 32'd4; WriteData = 32'd1; tick;

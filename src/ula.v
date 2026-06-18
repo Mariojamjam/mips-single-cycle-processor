@@ -6,8 +6,10 @@ module ula (
     output reg  [31:0] result,
     output wire        Zero_flag
 );
+    //all arithmetic and bitwise work funnels through here before branch logic looks at zero
 
     assign Zero_flag = (result == 32'b0);
+    //zero_flag looks tiny, but branch behavior depends on it later
 
     always @(*) begin
         //matches the encoding chosen in ula_ctrl

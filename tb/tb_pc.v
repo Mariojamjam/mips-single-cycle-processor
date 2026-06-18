@@ -3,6 +3,7 @@ module tb_pc;
     reg Reset;
     reg [31:0] nextPC;
     wire [31:0] currentPC;
+    //keeps the PC checks almost boring, which is exactly what we want from this block
 
     pc uut (
         .clk(clk),
@@ -15,6 +16,7 @@ module tb_pc;
 
     //Generates clock with 10 ns period
     always #5 clk = ~clk;
+    //very direct bench here, because PC timing bugs are easier to spot that way
 
 
     //Compares actual against expected, logs PASS/FAIL with test label
@@ -77,6 +79,7 @@ module tb_pc;
         if (errors == 0)
             $display("ALL PASS");
         else begin
+            //PC issues cascade into everything else, so stop fast if it breaks
             $display("FAILED - %0d error(s)", errors);
             $finish(1);
         end

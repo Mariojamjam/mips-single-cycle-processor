@@ -4,6 +4,7 @@ module tb_ula;
     reg [3:0]  OP;
     wire [31:0] result;
     wire        Zero_flag;
+    //poke the ALU directly so each operation can fail in a very obvious way
 
     ula uut (
         .In1(In1),
@@ -15,6 +16,7 @@ module tb_ula;
     );
 
     integer errors = 0;
+    //combinational bench, so we just poke values and wait a beat
     //Compares actual against expected, logs PASS/FAIL with operation label
     task check;
         input [31:0] expected;

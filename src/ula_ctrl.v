@@ -4,6 +4,7 @@ module ula_ctrl (
     input  wire [5:0] funct,
     output reg  [3:0] ULAOp
 );
+    //translates the abstract ALUOp control into the exact operation code the ALU understands
 
     always @(*) begin
         //ALUOp picks the decoding path, opcode/funct finish the job
@@ -11,6 +12,7 @@ module ula_ctrl (
             2'b00: ULAOp = 4'b0100; // ADD: lw/sw address calculation
             2'b01: ULAOp = 4'b0101; // SUB: beq/bne comparison
             2'b10: begin
+                //R-type is almost entirely about funct
                 case (funct)
                     6'b100100: ULAOp = 4'b0000; // AND
                     6'b100101: ULAOp = 4'b0001; // OR
@@ -30,6 +32,7 @@ module ula_ctrl (
                 endcase
             end
             2'b11: begin
+                //immediate arithmetic/logical ops reuse opcode instead of funct
                 case (opcode)
                     6'b001100: ULAOp = 4'b0000; // ANDI
                     6'b001101: ULAOp = 4'b0001; // ORI
