@@ -6,8 +6,7 @@ module tb_mips_wave;
     wire [31:0] ULAResult;
     wire [31:0] DataMemoryOut;
     reg  [31:0] last_t9;
-    //wave-only bench: no assertions, just enough scaffolding to watch the run
-    //this one exists more for humans with GTKWave than for pass/fail automation
+    //test-only signal
 
     mips_top #(
         .INSTRUCTION_DEPTH(128)
