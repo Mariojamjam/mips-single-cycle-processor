@@ -1,19 +1,14 @@
 #!/usr/bin/env bash
-
 set -euo pipefail
-
 usage() {
     cat <<'EOF'
 Usage:
   /run-testbench <module>
-
 Examples:
   /run-testbench ula
   /run-testbench ula_ctrl
   /run-testbench regfile
   /run-testbench mips_top
-  /run-testbench mips_wave
-
 Supported modules:
   pc
   i_mem
@@ -23,22 +18,18 @@ Supported modules:
   ula_ctrl
   ctrl
   mips_top
-  mips_wave
 EOF
 }
-
 if [[ $# -ne 1 ]]; then
     usage
     exit 1
 fi
-
 module="$1"
 find_project_dir() {
     if [[ -d "$PWD/src" && -d "$PWD/tb" ]]; then
         printf '%s\n' "$PWD"
         return
     fi
-
     for candidate in \
         /workspaces/mips-single-cycle-processor \
         /mips
@@ -48,30 +39,23 @@ find_project_dir() {
             return
         fi
     done
-
     echo "Error: project directory not found. Run this inside the project container." >&2
     exit 1
 }
-
 project_dir="$(find_project_dir)"
 cd "$project_dir"
-
 tb_file="tb/tb_${module}.v"
 src_file="src/${module}.v"
 out_file="sim/tb_${module}.out"
-
 if [[ ! -f "$tb_file" ]]; then
     echo "Error: testbench not found: $tb_file" >&2
     exit 1
 fi
-
-if [[ "$module" != "mips_top" && "$module" != "mips_wave" && ! -f "$src_file" ]]; then
+if [[ ! -f "$src_file" ]]; then
     echo "Error: source module not found: $src_file" >&2
     exit 1
 fi
-
 mkdir -p sim
-
 common_sources=(
     src/pc.v
     src/i_mem.v
@@ -82,9 +66,8 @@ common_sources=(
     src/ctrl.v
     src/mips_top.v
 )
-
 case "$module" in
-    mips_top|mips_wave)
+    mips_top)
         compile_sources=("$tb_file" "${common_sources[@]}")
         ;;
     pc|i_mem|d_mem|regfile|ula|ula_ctrl|ctrl)
@@ -96,10 +79,8 @@ case "$module" in
         exit 1
         ;;
 esac
-
 echo "Project: $project_dir"
 echo "Compiling $tb_file..."
 iverilog -o "$out_file" "${compile_sources[@]}"
-
 echo "Running $module testbench..."
 vvp "$out_file"
