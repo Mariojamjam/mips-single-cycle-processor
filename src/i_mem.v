@@ -7,8 +7,7 @@ module i_mem #(
 );
     //tiny ROM wrapper around the instruction text file used in simulation
     reg [31:0] mem [0:DEPTH-1];
-    //simple ROM image loaded from text, nothing fancy here
-
+    
     initial begin
         //load the test program once when simulation starts
         $readmemb(MEM_FILE, mem);
