@@ -15,11 +15,17 @@ module ctrl (
     output reg        LUI,
     output reg        ZeroExt
 );
-    //main decode block: opcode sets the broad path, funct only matters for R-type details
+
+    // Main control unit.
+    // Decodes the instruction opcode (and funct field for R-type instructions)
+    // and generates all control signals required by the datapath.
 
     always @(*) begin
-        //safe defaults before the opcode-specific cases
-        //this keeps weird opcodes from reusing an old control pattern by accident
+
+        // Default values assigned to all control signals.
+        // These defaults prevent latch inference and provide
+        // a safe behavior for unsupported opcodes.
+
         RegDst   = 1'b0;
         Branch   = 1'b0;
         MemRead  = 1'b0;
@@ -35,12 +41,20 @@ module ctrl (
         ZeroExt  = 1'b0;
 
         case (opcode)
+
+            // R-type instructions
             6'b000000: begin
-                //R-type needs funct to know if this is jr or a normal ALU op
-                if (funct == 6'b001000) begin // jr
+            
+                // jr (jump register)
+                // Updates the PC using the value stored in a register.
+                if (funct == 6'b001000) begin
                     //jr only redirects the PC
                     JR = 1'b1;
-                end else begin // other R-type
+                end
+
+                // Arithmetic and logical R-type instructions.
+                // The ALU result is written into register rd.
+                else begin
                     //regular R-type writes the ALU result into rd
                     RegDst   = 1'b1;
                     ALUOp    = 2'b10;
@@ -48,7 +62,9 @@ module ctrl (
                 end
             end
 
-            6'b100011: begin // lw
+            // lw (load word)
+            // Reads a word from memory and writes it into a register.
+            6'b100011: begin
                 //load computes an address in the ALU, then writes memory data back
                 MemRead  = 1'b1;
                 MemtoReg = 1'b1;
@@ -57,81 +73,96 @@ module ctrl (
                 ALUOp    = 2'b00;
             end
 
-            6'b101011: begin // sw
-                //store also uses the ALU for the effective address, but no writeback
+            // sw (store word)
+            // Writes a register value into memory.
+            6'b101011: begin
                 MemWrite = 1'b1;
                 ALUSrc   = 1'b1;
                 ALUOp    = 2'b00;
             end
 
-            6'b000100: begin // beq
-                //the actual take/not-take decision happens later with zero_flag
+            // beq (branch if equal)
+            // Performs a comparison and enables branch logic.
+            6'b000100: begin
                 Branch = 1'b1;
                 ALUOp  = 2'b01;
             end
 
-            6'b000101: begin // bne
-                //same compare datapath as beq, different sense at the top-level
+            // bne (branch if not equal)
+            // Uses the same comparison hardware as beq.
+            6'b000101: begin
                 Branch = 1'b1;
                 ALUOp  = 2'b01;
             end
 
-            6'b001000: begin // addi
+            // addi (add immediate)
+            // Adds a sign-extended immediate to a register value.
+            6'b001000: begin
                 ALUSrc   = 1'b1;
                 RegWrite = 1'b1;
                 ALUOp    = 2'b11;
             end
 
-            6'b001100: begin // andi
-                //this one is a good place to mess up extension rules, so keep it explicit
-                ALUSrc   = 1'b1;
-                RegWrite = 1'b1;
-                ALUOp    = 2'b11;
-                ZeroExt  = 1'b1;
-            end
-
-            6'b001101: begin // ori
-                //logic immediates keep the upper half zeroed
+            // andi (AND immediate)
+            // Uses zero extension for the immediate field.
+            6'b001100: begin
                 ALUSrc   = 1'b1;
                 RegWrite = 1'b1;
                 ALUOp    = 2'b11;
                 ZeroExt  = 1'b1;
             end
 
-            6'b001110: begin // xori
-                //same zero-extend rule here too
+            // ori (OR immediate)
+            // Uses zero extension for the immediate field.
+            6'b001101: begin
                 ALUSrc   = 1'b1;
                 RegWrite = 1'b1;
                 ALUOp    = 2'b11;
                 ZeroExt  = 1'b1;
             end
 
-            6'b001010: begin // slti
+            // xori (XOR immediate)
+            // Uses zero extension for the immediate field.
+            6'b001110: begin
+                ALUSrc   = 1'b1;
+                RegWrite = 1'b1;
+                ALUOp    = 2'b11;
+                ZeroExt  = 1'b1;
+            end
+
+            // slti (set less than immediate)
+            // Signed comparison with an immediate operand.
+            6'b001010: begin
                 ALUSrc   = 1'b1;
                 RegWrite = 1'b1;
                 ALUOp    = 2'b11;
             end
 
-            6'b001011: begin // sltiu
-                //unsigned compare, but still through the immediate ALU path
+            // sltiu (set less than immediate unsigned)
+            // Unsigned comparison with an immediate operand.
+            6'b001011: begin
                 ALUSrc   = 1'b1;
                 RegWrite = 1'b1;
                 ALUOp    = 2'b11;
             end
 
-            6'b001111: begin // lui
-                //writeback comes from the immediate upper half
+            // lui (load upper immediate)
+            // Loads the immediate value into the upper 16 bits.
+            6'b001111: begin
                 ALUSrc   = 1'b1;
                 RegWrite = 1'b1;
                 LUI      = 1'b1;
             end
 
-            6'b000010: begin // j
+            // j (jump)
+            // Performs an unconditional jump.
+            6'b000010: begin
                 Jump = 1'b1;
             end
 
-            6'b000011: begin // jal
-                //jal asks for both a jump and a link writeback
+            // jal (jump and link)
+            // Performs a jump and stores the return address.
+            6'b000011: begin
                 Jump     = 1'b1;
                 JAL      = 1'b1;
                 RegWrite = 1'b1;

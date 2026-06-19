@@ -5,15 +5,22 @@ module pc (
     output reg [31:0] currentPC
 );
 
-//tiny module, but fetch depends on it being boring and predictable
-//if this guy glitches, everything downstream starts looking suspicious
+    // Program Counter (PC).
+    // Stores the address of the instruction currently being fetched.
+
+    // PC update logic.
+    // The PC is updated on the rising edge of the clock.
+    // Reset has priority over normal operation.
+
+
 always @(posedge clk or posedge Reset) begin
-    //reset should restart fetch from address 0 right away
+
+    // When Reset is asserted, execution restarts from address 0.
     if (Reset)
         currentPC <= 32'h00000000;
+
+    // Otherwise, load the next instruction address.
     else
-        //otherwise just latch the next address for the new cycle
-        //one cycle later the new instruction shows up from i_mem
         currentPC <= nextPC;
 end
 
