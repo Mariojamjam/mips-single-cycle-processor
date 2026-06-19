@@ -1,6 +1,7 @@
 module tb_i_mem;
     reg  [31:0] address;
     wire [31:0] i_out;
+    //just enough to prove PC byte addresses land on the right ROM entries
 
     i_mem #(.MEM_FILE("programs/instruction_test.list")) uut (
         .address(address),
@@ -8,6 +9,7 @@ module tb_i_mem;
     );
 
     integer errors = 0;
+    //ROM bench is tiny on purpose: just prove the fetch mapping is sane
     //Compares actual against expected, logs PASS/FAIL with operation label
     task check;
         input [31:0] expected;
@@ -23,25 +25,26 @@ module tb_i_mem;
     endtask
 
     initial begin
-        //Checking if the i_mem can read instruction_test.list
-        //Also testing if the array progression that will be operated by the PC is working
-        //Minimal #1 delay confirms asynchronous behavior — no clock needed
+        //first instruction should live at byte address 0
         address = 32'd0;  #1;
         check(32'h00000001, i_out, "PC=0");
 
+        //next word should appear at PC=4
         address = 32'd4;  #1;
         check(32'h00000002, i_out, "PC=4");
 
+        //same mapping for the third slot
         address = 32'd8;  #1;
         check(32'h00000003, i_out, "PC=8");
 
+        //no clock here on purpose, the read is async
         address = 32'd12; #1;
         check(32'h00000004, i_out, "PC=12");
 
         if (errors == 0)
-            $display("ALL PASS — %0d tests", 4);
+            $display("ALL PASS - %0d tests", 4);
         else begin
-            $display("FAILED — %0d error(s)", errors);
+            $display("FAILED - %0d error(s)", errors);
             $finish(1);
         end
 

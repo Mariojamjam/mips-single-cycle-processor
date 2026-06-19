@@ -6,6 +6,7 @@ module tb_d_mem;
     reg         MemRead;
     reg         MemWrite;
     wire [31:0] ReadData;
+    //scripted memory scenarios are enough here, since the module is small and stateful
 
     d_mem uut (
         .Clock(Clock),
@@ -17,6 +18,7 @@ module tb_d_mem;
     );
 
     integer errors = 0;
+    //small scripted cases are enough here, no need to over-engineer it
 
     //Compares actual against expected, logs PASS/FAIL with operation label
     task check;
@@ -35,24 +37,24 @@ module tb_d_mem;
     //Triggers one rising clock edge
     task tick;
         begin
+            //helper so each memory scenario reads like a short script
             #5 Clock = 1;
             #5 Clock = 0;
         end
     endtask
 
     initial begin
-        //Write and read back
+        //write one word, then read the same slot back
         Clock = 0;
         MemWrite = 1; MemRead = 0; Address = 32'd0;; WriteData = 32'hAAAAAAAA; tick;
         MemWrite = 0; MemRead = 1; #1;
         check(32'hAAAAAAAA, ReadData, "write+read");
 
-        //Check impedance when write and read are both 0
+        //if nothing is being read, the bus should float
         MemWrite = 0; MemRead = 0; Address = 32'd0; #1;
-        check(32'bz, ReadData, " impedance");
+        check(32'bz, ReadData, "high impedance");
 
-        //Check if the writing permission is denied with MemWrite = 0
-        //First, we need to insert a known value in 32'd4 to check later
+        //this checks we do not accidentally write just because Address/Data changed
         MemWrite = 1; MemRead = 0; Address = 32'd4; WriteData = 32'hBCDAADCB; tick;
 
         MemRead=0; MemWrite = 0; Address = 32'd4; WriteData = 32'd1; tick;
@@ -60,7 +62,7 @@ module tb_d_mem;
         check(32'hBCDAADCB, ReadData, "write denied");
 
 
-        //Write different values to different addresses and verify no overlap
+        //different addresses should stay independent
         MemWrite = 1; MemRead = 0; Address = 32'd0;  WriteData = 32'hAAAAAAAA; tick;
         MemWrite = 1; MemRead = 0; Address = 32'd4;  WriteData = 32'hBBBBBBBB; tick;
         MemWrite = 1; MemRead = 0; Address = 32'd8;  WriteData = 32'hCCCCCCCC; tick;

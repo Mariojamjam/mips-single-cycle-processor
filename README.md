@@ -1,323 +1,308 @@
 # MIPS Single-Cycle Processor
 
-Implementação de um processador MIPS monociclo em Verilog. O processador executa um subconjunto da ISA MIPS, incluindo instruções dos tipos R, I e J, com suporte a operações aritméticas, lógicas, de memória e desvios.
+Verilog implementation of a single-cycle MIPS processor built around a small, testable datapath with dedicated fetch, decode, execute, memory, and write-back units.
 
----
+## Overview
 
-## O que será construído
+This project implements a single-cycle MIPS processor in Verilog and validates it through isolated testbenches and waveform-based simulation. The repository includes the core hardware modules, module-level testbenches, a top-level integration bench, and a waveform-oriented bench for inspecting full program execution. The processor is meant to be tested both through terminal-based runs and through GTKWave inspection of the instruction program stored in `programs/instruction.list`.
 
-O projeto implementa os seguintes módulos em Verilog, conectados hierarquicamente:
+## What This Project Implements
 
-| Módulo | Arquivo | Descrição |
-|---|---|---|
-| Contador de Programa | `src/pc.v` | Registrador síncrono de 32 bits que armazena o endereço da instrução atual |
-| Memória de instrução | `src/i_mem.v` | ROM assíncrona que carrega instruções do arquivo `instruction.list` |
-| Memória de dados | `src/d_mem.v` | RAM assíncrona para leitura e escrita de dados |
-| Banco de registradores | `src/regfile.v` | 32 registradores de 32 bits com leitura assíncrona e escrita síncrona |
-| ULA | `src/ula.v` | Executa operações aritméticas e lógicas |
-| Controle da ULA | `src/ula_ctrl.v` | Traduz `ALUOp` + `opcode`/`funct` para o código de operação da ULA |
-| Unidade de controle | `src/ctrl.v` | Decodifica o opcode e gera todos os sinais de controle |
-| Top-level | `src/mips_top.v` | Instancia e conecta todos os módulos com fios e multiplexadores |
+The processor is organized into the usual single-cycle building blocks:
 
-O processador expõe três saídas principais: valor atual do **PC**, resultado da **ULA** e saída da **memória de dados**.
+- Program Counter
+- Instruction Memory
+- Data Memory
+- Register File
+- ALU
+- ALU Control
+- Main Control Unit
+- Top-Level Datapath Integration
 
----
+Together, these units support a subset of MIPS instructions across arithmetic, logical, immediate, memory, branch, and jump behaviors.
 
-## Estrutura do repositório
+## Repository Structure
 
-```
+```text
 mips-single-cycle-processor/
-├── src/                    # módulos Verilog
-│   ├── pc.v
-│   ├── i_mem.v
-│   ├── d_mem.v
-│   ├── regfile.v
-│   ├── ula.v
-│   ├── ula_ctrl.v
-│   ├── ctrl.v
-│   └── mips_top.v
-├── tb/                     # testbenches
-│   ├── tb_pc.v
-│   ├── tb_ula.v
-│   ├── tb_regfile.v
-│   ├── tb_i_mem.v
-│   ├── tb_d_mem.v
-│   └── tb_mips_top.v
-├── programs/
-│   ├── instruction.list    # programa em binário (lido pela i_mem)
-│   └── soma.asm            # fonte assembly de referência
-├── sim/                    # gerada pelo Makefile, ignorada pelo git
-├── Dockerfile
-├── docker-compose.yml
-├── Makefile
-├── .gitignore
-└── README.md
+|-- src/                    # Verilog source modules
+|   |-- pc.v
+|   |-- i_mem.v
+|   |-- d_mem.v
+|   |-- regfile.v
+|   |-- ula.v
+|   |-- ula_ctrl.v
+|   |-- ctrl.v
+|   `-- mips_top.v
+|-- tb/                     # Testbenches
+|   |-- tb_pc.v
+|   |-- tb_i_mem.v
+|   |-- tb_d_mem.v
+|   |-- tb_regfile.v
+|   |-- tb_ula.v
+|   |-- tb_ula_ctrl.v
+|   |-- tb_ctrl.v
+|   |-- tb_mips_top.v
+|   `-- tb_mips_wave.v
+|-- programs/               # Binary program files used by instruction memory
+|   |-- instruction.list
+|   `-- instruction_test.list
+|-- sim/                    # Generated simulation artifacts
+|-- .devcontainer/
+|   `-- devcontainer.json
+|-- Dockerfile
+|-- docker-compose.yml
+|-- Makefile
+|-- run-testbench
+`-- README.md
 ```
 
----
+## Recommended Environment
 
-## Pré-requisitos
+The provided scripts are Linux-oriented. Because of that, the recommended environments are:
 
-Escolhe uma das opções abaixo conforme o teu sistema.
+1. Native Linux
+2. WSL
+3. DevContainer
 
----
+Direct PowerShell or Command Prompt usage is possible for manual compilation, but it is not the main workflow used by this repository.
 
-### Opção 1 — Linux nativo
+A DevContainer is a preconfigured containerized development environment. In practice, it opens the project with the required tools already installed, which makes setup more reproducible and avoids local dependency differences.
 
-Instala as dependências:
+## How to Run the Project
+
+### Linux / WSL (Recommended)
+
+Install the required tools:
 
 ```bash
-sudo apt install iverilog gtkwave make
+sudo apt update
+sudo apt install -y iverilog gtkwave make
 ```
 
----
+Clone the repository and enter it:
 
-### Opção 2 — Windows puro (sem WSL ou Docker)
-
-1. Baixa e instala o Icarus Verilog em [bleyer.org/icarus](http://bleyer.org/icarus/). Durante a instalação, marca a opção **Add to PATH**. O instalador já inclui o GTKWave.
-
-2. Abre o **Command Prompt** ou **PowerShell** e verifica a instalação:
-```cmd
-iverilog -v
-```
-
-3. Clona o repositório:
-```cmd
-git clone https://github.com/<org>/mips-single-cycle-processor
+```bash
+git clone <your-repository-url>
 cd mips-single-cycle-processor
 ```
 
-4. Como o `make` não está disponível nativamente no Windows, compila e simula manualmente:
-```cmd
-iverilog -o sim\mips.out tb\tb_mips_top.v src\pc.v src\i_mem.v src\d_mem.v src\regfile.v src\ula.v src\ula_ctrl.v src\ctrl.v src\mips_top.v
-vvp sim\mips.out
-```
-
-5. Para visualizar formas de onda:
-```cmd
-gtkwave sim\mips.vcd
-```
-
-> **Nota:** quem usar o Quartus no Windows pode compilar e simular diretamente pela interface gráfica do Quartus, importando os arquivos da pasta `src/`.
-
----
-
-### Opção 3 — Windows com WSL
-
-1. Instala o WSL caso ainda não tenha:
-```powershell
-wsl --install
-```
-
-2. Abre o terminal WSL e instala as dependências:
-```bash
-sudo apt install iverilog gtkwave make
-```
-
-3. Clona o repositório dentro do WSL (não na pasta `/mnt/c/...`):
-```bash
-cd ~
-git clone https://github.com/<org>/mips-single-cycle-processor
-cd mips-single-cycle-processor
-```
-
-> **Atenção:** clonar dentro do WSL (`~/`) e não no sistema de arquivos do Windows (`/mnt/c/`) evita problemas de performance e permissão.
-
----
-
-### Opção 4 — Windows com Docker
-
-1. Instala o [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-
-2. Clona o repositório:
-```powershell
-git clone https://github.com/<org>/mips-single-cycle-processor
-cd mips-single-cycle-processor
-```
-
-3. Faz o build da imagem:
-```bash
-docker compose build
-```
-
-4. Entra no container:
-```bash
-docker compose run mips
-```
-
-A partir daqui, o terminal está dentro do container com o ambiente completo. Os comandos são os mesmos do Linux.
-
-> **Nota sobre GTKWave no Docker:** o GTKWave abre uma janela gráfica que não funciona dentro do container. Para visualizar as formas de onda, gera o arquivo `.vcd` dentro do container com `vvp sim/mips.out` e abre o arquivo `sim/mips.vcd` com o GTKWave instalado no Windows.
-
----
-
-## Como rodar
-
-### Compilar e simular
+Run an isolated module test:
 
 ```bash
-make
+./run-testbench ula
 ```
 
-Compila todos os módulos junto com o testbench do top-level e executa a simulação. A saída aparece diretamente no terminal.
-
-### Visualizar formas de onda
+Run the waveform-oriented top-level simulation:
 
 ```bash
 make wave
 ```
 
-Abre o GTKWave com o arquivo `.vcd` gerado pela simulação. Requer que `make` tenha sido executado antes.
+### DevContainer (Recommended on Windows)
 
-### Limpar artefatos gerados
+If you are on Windows, this is one of the safest ways to get a reproducible environment.
+
+1. Install Docker Desktop.
+2. Install Visual Studio Code.
+3. Install the Dev Containers extension in VS Code.
+4. Open the repository folder in VS Code.
+5. Choose `Reopen in Container`.
+6. Wait for the environment to build.
+7. Run the same Linux commands from the integrated terminal.
+
+Example:
+
+```bash
+./run-testbench regfile
+make wave
+```
+
+### Windows Notes
+
+- The repository scripts are Bash scripts.
+- Because of that, WSL or the DevContainer is strongly recommended on Windows.
+- Running directly from PowerShell or Command Prompt is not the intended path for the provided automation.
+
+## Test and Simulation Commands
+
+### `./run-testbench <module>`
+
+This script compiles and runs one testbench at a time. It exists to make module-level validation fast, repeatable, and easy to use.
+
+Examples:
+
+```bash
+./run-testbench pc
+./run-testbench regfile
+./run-testbench ula
+./run-testbench ula_ctrl
+./run-testbench ctrl
+./run-testbench mips_top
+./run-testbench mips_wave
+```
+
+Supported module names:
+
+- `pc`
+- `i_mem`
+- `d_mem`
+- `regfile`
+- `ula`
+- `ula_ctrl`
+- `ctrl`
+- `mips_top`
+- `mips_wave`
+
+### `make`
+
+Runs the lightweight waveform-oriented top-level simulation. This is useful for a quick end-to-end execution using the program loaded by instruction memory.
+
+```bash
+make
+```
+
+### `make wave`
+
+Runs the waveform bench and opens GTKWave automatically. This is the most practical command for showing processor execution visually.
+
+```bash
+make wave
+```
+
+### `make clean`
+
+Removes generated simulation files from `sim/`.
 
 ```bash
 make clean
 ```
 
-Remove os arquivos `.out` e `.vcd` da pasta `sim/`.
+## Quick Demo for Evaluation
 
-### Checar sintaxe de um módulo isolado
-
-```bash
-iverilog -tnull src/ula.v
-```
-
-Valida a sintaxe sem precisar de testbench. Não produz saída se não houver erros.
-
-### Compilar e testar um módulo isolado
+If the goal is to validate the project quickly, this is a good minimal sequence:
 
 ```bash
-iverilog -o sim/tb_ula.out src/ula.v tb/tb_ula.v
-vvp sim/tb_ula.out
+./run-testbench ctrl
+./run-testbench regfile
+./run-testbench mips_top
+make wave
 ```
 
----
+This gives:
 
-## Como contribuir
+- a control-unit check
+- a register-file check
+- a top-level integration check
+- a waveform-based visual execution of the program
 
-### Branches
+## Implemented Modules
 
-```
-main        ← código estável, só via PR da dev
-dev         ← integração, só via PR de feature branches
-feat/<nome> ← onde cada membro desenvolve
-```
+| Module | File | Purpose |
+|---|---|---|
+| Program Counter | `src/pc.v` | Holds the current instruction address and updates on clock edges |
+| Instruction Memory | `src/i_mem.v` | Loads instructions from a binary text file and serves them asynchronously |
+| Data Memory | `src/d_mem.v` | Stores and returns data for load/store operations |
+| Register File | `src/regfile.v` | Provides two read ports and one write port for the 32 MIPS registers |
+| ALU | `src/ula.v` | Executes arithmetic, logical, comparison, and shift operations |
+| ALU Control | `src/ula_ctrl.v` | Maps decoded instruction intent into a concrete ALU operation code |
+| Main Control Unit | `src/ctrl.v` | Generates high-level control signals from `opcode` and selected instruction fields |
+| Top Level | `src/mips_top.v` | Wires the full datapath together and drives fetch, control, execution, memory, and write-back |
 
-Nunca commita diretamente em `main` ou `dev`.
+## Implemented Testbenches
 
-### Fluxo de trabalho
+| Testbench | Target | What it verifies |
+|---|---|---|
+| `tb/tb_pc.v` | `pc` | Reset behavior and PC updates |
+| `tb/tb_i_mem.v` | `i_mem` | Instruction fetch mapping from byte address to word slot |
+| `tb/tb_d_mem.v` | `d_mem` | Read/write behavior and high-impedance output when reads are disabled |
+| `tb/tb_regfile.v` | `regfile` | Register reads, writes, reset, and `$zero` protection |
+| `tb/tb_ula.v` | `ula` | Arithmetic, logical, comparison, shift, and zero-flag behavior |
+| `tb/tb_ula_ctrl.v` | `ula_ctrl` | ALU operation decoding from control fields |
+| `tb/tb_ctrl.v` | `ctrl` | Main control-signal generation for supported instructions |
+| `tb/tb_mips_top.v` | `mips_top` | Top-level instruction fetch and integration behavior |
+| `tb/tb_mips_wave.v` | `mips_top` | Full-program execution with waveform dumping for GTKWave |
 
-```bash
-# parte da dev sempre atualizada
-git checkout dev
-git pull
+## Verification Workflow
 
-# cria a branch da tua feature
-git checkout -b feat/ula
+The most reliable way to validate the project is:
 
-# desenvolve, commita
-git add .
-git commit -m "feat: implement arithmetic operations in ALU"
+1. Run isolated module testbenches with `./run-testbench <module>`.
+2. Run the top-level integration test with `./run-testbench mips_top`.
+3. Run the waveform simulation with `make wave` to inspect execution visually.
 
-# abre PR para dev
-git push origin feat/ula
-```
+This sequence gives both unit-level confidence and full-program verification.
 
-Abre o Pull Request pelo GitHub apontando para `dev`.
+## How to Inspect Execution in GTKWave
 
-### Padrão de commits
+The `.vcd` file is generated by the waveform testbench during simulation. GTKWave does not simulate the design by itself; it only visualizes the signals that the testbench dumped.
 
-```
-feat: implement ALU module
-fix: fix control signal for beq instruction
-test: add regfile testbench
-docs: update README
-chore: add Makefile
-```
+For this project, the most useful signals to inspect are:
 
-### Idioma
+- `T9`
+- `PC`
+- `ULAResult`
+- `DataMemoryOut`
 
-Todo o projeto deve ser escrito em inglês: comentários no código, mensagens de commit, nomes de variáveis, módulos e sinais, e descrições nos Pull Requests.
+The `T9` signal is especially useful because it mirrors register `$t9` and is used as a test marker in the bigger instruction program. In the program, `$t9` is incremented at the beginning of each test block. That means every time `T9` changes value in GTKWave, a new test section has started.
 
----
+Recommended GTKWave workflow:
 
-## Roadmap de implementação
+1. Run `make wave`.
+2. Open the generated waveform.
+3. Add `T9`, `PC`, `ULAResult`, and `DataMemoryOut` to the wave window.
+4. Use each transition of `T9` as the boundary between tests.
+5. Zoom into the interval right after each `T9` change.
+6. Compare the waveform with the corresponding instructions in the test program.
 
-Implementa os módulos **nessa ordem** — cada um depende dos anteriores estar funcionando e testado antes de avançar.
+This is much clearer than trying to inspect the entire execution as one single block.
 
-### Etapa 1 — ULA (`src/ula.v` + `tb/tb_ula.v`)
+## How to Validate `instruction.list`
 
-O módulo mais independente do projeto. Implementa todas as operações aritméticas e lógicas: `add`, `sub`, `and`, `or`, `xor`, `nor`, `slt`, `sltu`, `sll`, `srl`, `sra`, `sllv`, `srlv`, `srav`.
+To validate `programs/instruction.list`, the recommended approach is to inspect it in GTKWave test by test.
 
-Recebe `In1` (32 bits), `In2` (32 bits) e `OP` (4 bits). Produz `result` (32 bits) e `Zero_flag` (1 bit).
+The main idea is:
 
-**Critério de conclusão:** testbench passa para todas as operações, incluindo casos de borda (resultado zero, valores negativos, overflow).
+- run the waveform simulation
+- use `T9` as the test boundary marker
+- compare each block of waveform activity against the corresponding instructions in the program
 
----
+What to observe in each kind of test:
 
-### Etapa 2 — Banco de registradores (`src/regfile.v` + `tb/tb_regfile.v`)
+- Arithmetic and logical tests: focus on `ULAResult`
+- Branch and jump tests: focus on `PC`
+- Memory tests: focus on `ULAResult` and `DataMemoryOut`
+- Return-address behavior: focus on `PC` and, if available, the register/write-back path related to `$ra`
 
-32 registradores de 32 bits. O registrador `$0` sempre retorna zero e nunca pode ser escrito. Leitura assíncrona em dois registradores simultaneamente. Escrita síncrona na borda de subida do clock quando `RegWrite=1`. Sinal `Reset` zera todos os registradores.
+For the presentation or evaluation flow, the simplest strategy is:
 
-**Critério de conclusão:** escrita e leitura funcionam corretamente, `$0` permanece zero após tentativa de escrita, reset funciona.
+1. Show that the program is loaded and the wave simulation runs.
+2. Keep `T9`, `PC`, `ULAResult`, and `DataMemoryOut` visible.
+3. Navigate from one `T9` transition to the next.
+4. For each block, point only to the signals that prove the intended behavior.
 
----
+This keeps the verification focused and makes it easier to explain why each instruction group is working.
 
-### Etapa 3 — Memória de instrução (`src/i_mem.v` + `tb/tb_i_mem.v`)
+## Instruction Coverage
 
-ROM assíncrona com tamanho parametrizável. Carrega as instruções do arquivo `programs/instruction.list` usando `$readmemb`. Recebe `address` (32 bits) e retorna a instrução de 32 bits em `i_out`.
+The current implementation covers instruction families across:
 
-O endereçamento é por byte, então divide o endereço por 4 para indexar o array: `mem[address >> 2]`.
+- R-type arithmetic and logical operations
+- Shift operations
+- Immediate arithmetic and logical operations
+- Load and store
+- Branch comparison and control flow
+- Jump instructions
+- Link/return-related control flow
 
-**Critério de conclusão:** instrução correta retornada para cada endereço.
+## Methodology
 
----
+The project was developed incrementally. Each module was implemented as an isolated unit first, then validated with a dedicated testbench, and only after that integrated into the top-level datapath. On top of the unit tests, the full processor behavior is inspected through a program-driven waveform simulation, which makes it possible to verify not just isolated modules but also instruction sequencing, control flow, and memory interaction.
 
-### Etapa 4 — Memória de dados (`src/d_mem.v` + `tb/tb_d_mem.v`)
+## Known Notes and Limitations
 
-RAM assíncrona com tamanho parametrizável. Quando `MemWrite=1`, escreve `WriteData` no endereço. Quando `MemRead=1`, coloca o conteúdo em `ReadData`. Quando `MemRead=0`, `ReadData` deve ficar em alta impedância (`32'bz`).
-
-**Critério de conclusão:** escrita e leitura no mesmo endereço retornam o valor correto.
-
----
-
-### Etapa 5 — Contador de Programa (`src/pc.v` + `tb/tb_pc.v`)
-
-Registrador síncrono de 32 bits. Atualiza na borda de subida do clock com o valor de `nextPC`. Inicializa em `32'h00000000`.
-
-**Critério de conclusão:** PC atualiza corretamente com um ciclo de atraso em relação ao `nextPC`.
-
----
-
-### Etapa 6 — Controle da ULA (`src/ula_ctrl.v` + `tb/tb_ula_ctrl.v`)
-
-Recebe `ALUOp` (2 bits) da unidade de controle, `opcode` (6 bits) e `funct` (6 bits) da instrução. Produz `ULAOp` (4 bits) que vai direto para a ULA.
-
-Lógica de decodificação:
-- `ALUOp=00` → add (usado por `lw`/`sw`)
-- `ALUOp=01` → sub (usado por `beq`/`bne`)
-- `ALUOp=10` → decodifica pelo campo `funct` (instruções tipo R)
-- `ALUOp=11` → decodifica pelo campo `opcode` (operações tipo I aritméticas, como `addi`, `andi`, etc.)
-
-**Critério de conclusão:** `ULAOp` correto para cada combinação de `ALUOp` + `opcode`/`funct`.
-
----
-
-### Etapa 7 — Unidade de controle (`src/ctrl.v` + `tb/tb_ctrl.v`)
-
-Recebe o `opcode` (6 bits) e gera todos os sinais de controle para o restante do processador. Cobre todos os opcodes das instruções do enunciado.
-
-Sinais mínimos: `RegDst`, `Branch`, `MemRead`, `MemtoReg`, `ALUOp`, `MemWrite`, `ALUSrc`, `RegWrite`, `Jump`, `JAL`, `JR`.
-
-**Critério de conclusão:** sinais corretos gerados para cada opcode.
-
----
-
-### Etapa 8 — Top-level (`src/mips_top.v` + `tb/tb_mips_top.v`)
-
-Instancia todos os módulos anteriores e os conecta com `wire`. Os multiplexadores são implementados com `assign` e operador ternário. Implementa o cálculo do `nextPC` para instruções sequenciais, desvios e saltos. Implementa a extensão de sinal do imediato.
-
-**Critério de conclusão:** processador executa corretamente um programa de teste em `programs/instruction.list` cobrindo instruções tipo R, `lw`, `sw`, `beq` e `j`.
-
----
+- The automation scripts are Bash-based.
+- Linux, WSL, or DevContainer usage is recommended.
+- GTKWave only shows the signals that were dumped by the testbench.
+- If a program runs past the initialized instruction memory region, undefined values such as `xxxxxxxx` may appear in the waveform.
+- Direct Windows terminal usage is not the primary workflow for this repository.
